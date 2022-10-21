@@ -53,7 +53,7 @@ resource "aws_cloudwatch_log_group" "test" {
 }
 
 resource "aws_s3_bucket" "bucket" {
-  bucket = "msk-broker-logs-bucket"
+  bucket = "msk-broker-logs-bucket-coremont-sandbox-secondary"
 }
 
 resource "aws_s3_bucket_acl" "bucket_acl" {
@@ -62,7 +62,7 @@ resource "aws_s3_bucket_acl" "bucket_acl" {
 }
 
 resource "aws_iam_role" "firehose_role" {
-  name = "firehose_test_role"
+  name = "firehose_test_role_secondary"
 
   assume_role_policy = <<EOF
 {
