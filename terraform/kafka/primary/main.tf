@@ -53,7 +53,8 @@ resource "aws_cloudwatch_log_group" "test" {
 }
 
 resource "aws_s3_bucket" "bucket" {
-  bucket = "msk-broker-logs-bucket-coremont-sandbox"
+  bucket = "msk-broker-logs-bucket-coremont-sandbox-primary"
+  force_destroy = true
 }
 
 resource "aws_s3_bucket_acl" "bucket_acl" {
