@@ -15,34 +15,88 @@ provider "aws" {
 
 
 resource "aws_vpc" "vpc" {
-  cidr_block = "10.0.0.0/22"
+  cidr_block = "10.0.0.0/16"
+  enable_dns_hostnames = true
+  enable_dns_support = true
+      tags = {
+    Name = "secondaryvpc_mskcluster"
+  }
 }
 
+resource "aws_internet_gateway" "gw" {
+  vpc_id = aws_vpc.vpc.id
+ 
+  tags = {
+    Name = "secondary_internet_gateway"
+  }
+  depends_on = [
+    aws_vpc.vpc
+  ]
+}
+
+
+data "aws_route_table" "secondaryvpc_mskcluster_routetable" {
+  vpc_id = aws_vpc.vpc.id
+}
 data "aws_availability_zones" "azs" {
   state = "available"
+}
+
+resource "aws_route" "secondaryvpc_mskcluster_route_gatewaytraffic" {
+  route_table_id            = data.aws_route_table.secondaryvpc_mskcluster_routetable.id
+  destination_cidr_block    = "0.0.0.0/0"
+  gateway_id = aws_internet_gateway.gw.id
 }
 
 resource "aws_subnet" "subnet_az1" {
   availability_zone = data.aws_availability_zones.azs.names[0]
   cidr_block        = "10.0.0.0/24"
   vpc_id            = aws_vpc.vpc.id
+  map_public_ip_on_launch = true
+   tags = {
+    Name = "secondaryvpcsubnet1_mskcluster"
+  }
+    depends_on = [
+    aws_vpc.vpc
+  ]
 }
 
 resource "aws_subnet" "subnet_az2" {
   availability_zone = data.aws_availability_zones.azs.names[1]
   cidr_block        = "10.0.1.0/24"
   vpc_id            = aws_vpc.vpc.id
+     tags = {
+    Name = "secondaryvpcsubnet2_mskcluster"
+  }
+    depends_on = [
+    aws_vpc.vpc
+  ]
 }
 
 resource "aws_subnet" "subnet_az3" {
   availability_zone = data.aws_availability_zones.azs.names[2]
   cidr_block        = "10.0.2.0/24"
   vpc_id            = aws_vpc.vpc.id
+     tags = {
+    Name = "secondaryvpcsubnet3_mskcluster"
+  }
+    depends_on = [
+    aws_vpc.vpc
+  ]
 }
 
 resource "aws_security_group" "sg" {
   vpc_id = aws_vpc.vpc.id
-}
+  revoke_rules_on_delete = true
+   ingress {
+    description      = "TLS from VPC"
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    
+    cidr_blocks      = ["0.0.0.0/0"]
+    }
+  }
 
 resource "aws_kms_key" "kms" {
   description = "secondarykafkacluster"
@@ -124,7 +178,14 @@ resource "aws_msk_cluster" "secondarykafkacluster" {
 
   encryption_info {
     encryption_at_rest_kms_key_arn = aws_kms_key.kms.arn
+    encryption_in_transit {
+      client_broker = "TLS_PLAINTEXT"
+    }
   }
+
+client_authentication {
+  unauthenticated = true
+}
 
   open_monitoring {
     prometheus {
@@ -160,11 +221,30 @@ resource "aws_msk_cluster" "secondarykafkacluster" {
   }
 }
 
+resource "aws_network_interface" "ani" {
+  subnet_id   = aws_subnet.subnet_az1.id
+   tags = {
+    Name = "primary_network_interface"
+  }
+}
+
+resource "aws_instance" "awskafkaclient" {
+  ami           = "ami-005e54dee72cc1d00" # us-west-2
+  instance_type = "t2.micro"
+  network_interface {
+    network_interface_id = aws_network_interface.ani.id
+    device_index         = 0
+  }
+
+  credit_specification {
+    cpu_credits = "unlimited"
+  }
+}
 output "zookeeper_connect_string" {
   value = aws_msk_cluster.secondarykafkacluster.zookeeper_connect_string
 }
 
 output "bootstrap_brokers_tls" {
   description = "TLS connection host:port pairs"
-  value       = aws_msk_cluster.secondarykafkacluster.bootstrap_brokers_tls
+  value       = aws_msk_cluster.secondarykafkacluster.bootstrap_brokers
 }

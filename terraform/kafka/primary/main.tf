@@ -16,32 +16,92 @@ provider "aws" {
 
 resource "aws_vpc" "vpc" {
   cidr_block = "192.168.0.0/22"
+  enable_dns_hostnames = true
+  enable_dns_support = true
+    tags = {
+    Name = "primaryvpc_mskcluster"
+  }
+  }
+
+resource "aws_internet_gateway" "gw" {
+  vpc_id = aws_vpc.vpc.id
+ 
+  tags = {
+    Name = "primary_internet_gateway"
+  }
+  depends_on = [
+    aws_vpc.vpc
+  ]
+}
+
+data "aws_route_table" "primaryvpc_mskcluster_routetable" {
+  vpc_id = aws_vpc.vpc.id
 }
 
 data "aws_availability_zones" "azs" {
   state = "available"
 }
 
+resource "aws_route" "primaryvpc_mskcluster_route_gatewaytraffic" {
+  route_table_id            = data.aws_route_table.primaryvpc_mskcluster_routetable.id
+  destination_cidr_block    = "0.0.0.0/0"
+  gateway_id = aws_internet_gateway.gw.id
+}
+
 resource "aws_subnet" "subnet_az1" {
   availability_zone = data.aws_availability_zones.azs.names[0]
   cidr_block        = "192.168.0.0/24"
   vpc_id            = aws_vpc.vpc.id
+  map_public_ip_on_launch = true
+  depends_on = [
+    aws_vpc.vpc
+  ]
+   tags = {
+    Name = "primaryvpcsubnet1_mskcluster"
+  }
 }
 
 resource "aws_subnet" "subnet_az2" {
   availability_zone = data.aws_availability_zones.azs.names[1]
   cidr_block        = "192.168.1.0/24"
   vpc_id            = aws_vpc.vpc.id
+    depends_on = [
+    aws_vpc.vpc
+  ]
+     tags = {
+    Name = "primaryvpcsubnet2_mskcluster"
+  }
 }
 
 resource "aws_subnet" "subnet_az3" {
   availability_zone = data.aws_availability_zones.azs.names[2]
   cidr_block        = "192.168.2.0/24"
   vpc_id            = aws_vpc.vpc.id
+    depends_on = [
+    aws_vpc.vpc
+  ]
+     tags = {
+    Name = "primaryvpcsubnet3_mskcluster"
+  }
 }
 
 resource "aws_security_group" "sg" {
   vpc_id = aws_vpc.vpc.id
+  revoke_rules_on_delete = true
+     ingress {
+    description      = "TLS from VPC"
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    
+    cidr_blocks      = ["0.0.0.0/0"]
+    }
+         tags = {
+    Name = "primaryvpcsecurity_mskcluster"
+  }
+  depends_on = [
+    aws_vpc.vpc
+  ]
 }
 
 resource "aws_kms_key" "kms" {
@@ -124,8 +184,13 @@ resource "aws_msk_cluster" "primarykafkacluster" {
 
   encryption_info {
     encryption_at_rest_kms_key_arn = aws_kms_key.kms.arn
+    encryption_in_transit {
+      client_broker = "TLS_PLAINTEXT"
+    }
   }
-
+client_authentication {
+  unauthenticated = true
+}
   open_monitoring {
     prometheus {
       jmx_exporter {
@@ -166,5 +231,5 @@ output "zookeeper_connect_string" {
 
 output "bootstrap_brokers_tls" {
   description = "TLS connection host:port pairs"
-  value       = aws_msk_cluster.primarykafkacluster.bootstrap_brokers_tls
+  value       = aws_msk_cluster.primarykafkacluster.bootstrap_brokers
 }
