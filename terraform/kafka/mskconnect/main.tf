@@ -143,58 +143,6 @@ resource "aws_security_group" "sg" {
     }
 }
 
-resource "aws_iam_role" "role" {
-  name = "MSKConnectExampleRole"
-
-  assume_role_policy = jsonencode(
-{
-	"Version": "2012-10-17",
-	"Statement": [
-		{
-			"Effect": "Allow",
-			"Principal": {
-				"Service": "kafkaconnect.amazonaws.com"
-			},
-			"Action": "sts:AssumeRole"
-		},
-		{
-			"Effect": "Allow",
-			"Principal": {
-				"AWS": "arn:aws:sts::100828196990:assumed-role/MSKConnectExampleRole/100828196990"
-			},
-			"Action": "sts:AssumeRole"
-		}
-	]
-}
-)
-}
-
-resource "aws_iam_policy" "policy" {
-  name        = "test-policy"
-  description = "A test policy"
-
-  policy = jsonencode(
-  {
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": [
-                "kafka-cluster:*",
-                "kafka:*"
-            ],
-            "Resource":"*"
-          }
-    ]
-}
-)
-}
-
-resource "aws_iam_role_policy_attachment" "test-attach" {
-  role       = aws_iam_role.role.name
-  policy_arn = aws_iam_policy.policy.arn
-}
-
 resource "aws_s3_bucket" "mm2bucket" {
   bucket = "mm2bucketmm2zipmskconnect"
   force_destroy = true
@@ -202,16 +150,27 @@ resource "aws_s3_bucket" "mm2bucket" {
 
 resource "aws_s3_object" "mm2object" {
   bucket = "mm2bucketmm2zipmskconnect"
-  key    = "mm2.zip"
-  source = "mm2.zip"
-    etag = filemd5("/mm2/mm2.zip")
+  key    = "connect-api-2.7.1.jar"
+  source = "connect-api-2.7.1.jar"
+    etag = filemd5("/connect-api-2.7.1.jar")
     depends_on = [
       aws_s3_bucket.mm2bucket
     ]
 }
 
+resource "aws_cloudwatch_log_group" "mskconnect_MirrorSourceConnector_logs" {
+  name = "mskconnect_MirrorSourceConnector_logs"
+}
+
+resource "aws_cloudwatch_log_group" "mskconnect_MirrorCheckpointConnector_logs" {
+  name = "mskconnect_MirrorCheckpointConnector_logs"
+}
+resource "aws_cloudwatch_log_group" "mskconnect_MirrorHeartbeatConnector_logs" {
+  name = "mskconnect_MirrorHeartbeatConnector_logs"
+}
+
 resource "aws_mskconnect_custom_plugin" "example" {
-  name         = "mm2-example"
+  name         = "MSKConnectPlugin"
   content_type = "ZIP"
   location {
     s3 {
@@ -223,7 +182,6 @@ resource "aws_mskconnect_custom_plugin" "example" {
     aws_route.r_secondary
   ]
 }
-
 
 
 resource "aws_mskconnect_connector" "MirrorSourceConnector" {
@@ -249,12 +207,18 @@ resource "aws_mskconnect_connector" "MirrorSourceConnector" {
 
   connector_configuration = {
 "connector.class"="org.apache.kafka.connect.mirror.MirrorSourceConnector"
-"tasks.max"=20
-"clusters"="source,target"
-"source.bootstrap.servers"="b-1.primarykafkacluster.qwkfdv.c6.kafka.eu-west-1.amazonaws.com:9092,b-3.primarykafkacluster.qwkfdv.c6.kafka.eu-west-1.amazonaws.com:9092,b-2.primarykafkacluster.qwkfdv.c6.kafka.eu-west-1.amazonaws.com:9092"
-"target.bootstrap.servers"="b-1.secondarykafkacluster.evhr1x.c10.kafka.us-west-2.amazonaws.com:9092,b-3.secondarykafkacluster.evhr1x.c10.kafka.us-west-2.amazonaws.com:9092,b-2.secondarykafkacluster.evhr1x.c10.kafka.us-west-2.amazonaws.com:9092"
-"emit.checkpoints.interval.seconds" = 10
-"source.offset.storage.topic" = "mm2-offsets"
+"target.cluster.alias"="target"
+"sync.topic.acls.enabled"="false"
+"tasks.max"=1
+"topics"=".*"
+"groups"=".*"
+"emit.checkpoints.interval.seconds" = 1
+"source.clusters.alias"="source"
+"source.bootstrap.servers"=data.aws_msk_cluster.primarykafkacluster.bootstrap_brokers
+"target.bootstrap.servers"=data.aws_msk_cluster.secondarykafkacluster.bootstrap_brokers
+"emit.heartbeats.interval.seconds"=1
+"value.converter"="org.apache.kafka.connect.converters.ByteArrayConverter"
+"key.converter"="org.apache.kafka.connect.converters.ByteArrayConverter"
 }
 
   kafka_cluster {
@@ -286,7 +250,16 @@ resource "aws_mskconnect_connector" "MirrorSourceConnector" {
     }
   }
 
-  service_execution_role_arn = "arn:aws:iam::100828196990:user/org_arun_developer1"
+log_delivery {
+  worker_log_delivery {
+    cloudwatch_logs {
+      enabled = true
+      log_group = aws_cloudwatch_log_group.mskconnect_MirrorSourceConnector_logs.name
+    }
+  }
+}
+
+  service_execution_role_arn = "arn:aws:iam::100828196990:role/MSKConnectMirror"
 }
 
 
@@ -313,12 +286,18 @@ resource "aws_mskconnect_connector" "MirrorCheckpointConnector" {
 
   connector_configuration = {
 "connector.class"="org.apache.kafka.connect.mirror.MirrorCheckpointConnector"
-"tasks.max"=20
-"clusters"="source,target"
-"source.bootstrap.servers"="b-1.primarykafkacluster.qwkfdv.c6.kafka.eu-west-1.amazonaws.com:9092,b-3.primarykafkacluster.qwkfdv.c6.kafka.eu-west-1.amazonaws.com:9092,b-2.primarykafkacluster.qwkfdv.c6.kafka.eu-west-1.amazonaws.com:9092"
-"target.bootstrap.servers"="b-1.secondarykafkacluster.evhr1x.c10.kafka.us-west-2.amazonaws.com:9092,b-3.secondarykafkacluster.evhr1x.c10.kafka.us-west-2.amazonaws.com:9092,b-2.secondarykafkacluster.evhr1x.c10.kafka.us-west-2.amazonaws.com:9092"
-"emit.checkpoints.interval.seconds" = 10
-"source.offset.storage.topic" = "mm2-offsets"
+"target.cluster.alias"="target"
+"sync.topic.acls.enabled"="false"
+"tasks.max"=1
+"topics"=".*"
+"groups"=".*"
+"emit.checkpoints.interval.seconds" = 1
+"source.clusters.alias"="source"
+"source.bootstrap.servers"=data.aws_msk_cluster.primarykafkacluster.bootstrap_brokers
+"target.bootstrap.servers"=data.aws_msk_cluster.secondarykafkacluster.bootstrap_brokers
+"emit.heartbeats.interval.seconds"=1
+"value.converter"="org.apache.kafka.connect.converters.ByteArrayConverter"
+"key.converter"="org.apache.kafka.connect.converters.ByteArrayConverter"
 }
 
   kafka_cluster {
@@ -349,8 +328,15 @@ resource "aws_mskconnect_connector" "MirrorCheckpointConnector" {
       revision = aws_mskconnect_custom_plugin.example.latest_revision
     }
   }
-
-  service_execution_role_arn = "arn:aws:iam::100828196990:user/org_arun_developer1"
+log_delivery {
+  worker_log_delivery {
+    cloudwatch_logs {
+      enabled = true
+      log_group = aws_cloudwatch_log_group.mskconnect_MirrorCheckpointConnector_logs.name
+    }
+  }
+}
+  service_execution_role_arn = "arn:aws:iam::100828196990:role/MSKConnectMirror"
 }
 
 resource "aws_mskconnect_connector" "MirrorHeartbeatConnector" {
@@ -376,12 +362,18 @@ resource "aws_mskconnect_connector" "MirrorHeartbeatConnector" {
 
   connector_configuration = {
 "connector.class"="org.apache.kafka.connect.mirror.MirrorHeartbeatConnector"
-"tasks.max"=20
-"clusters"="source,target"
-"source.bootstrap.servers"="b-1.primarykafkacluster.qwkfdv.c6.kafka.eu-west-1.amazonaws.com:9092,b-3.primarykafkacluster.qwkfdv.c6.kafka.eu-west-1.amazonaws.com:9092,b-2.primarykafkacluster.qwkfdv.c6.kafka.eu-west-1.amazonaws.com:9092"
-"target.bootstrap.servers"="b-1.secondarykafkacluster.evhr1x.c10.kafka.us-west-2.amazonaws.com:9092,b-3.secondarykafkacluster.evhr1x.c10.kafka.us-west-2.amazonaws.com:9092,b-2.secondarykafkacluster.evhr1x.c10.kafka.us-west-2.amazonaws.com:9092"
-"emit.checkpoints.interval.seconds" = 10
-"source.offset.storage.topic" = "mm2-offsets"
+"target.cluster.alias"="target"
+"sync.topic.acls.enabled"="false"
+"tasks.max"=1
+"topics"=".*"
+"groups"=".*"
+"emit.checkpoints.interval.seconds" = 1
+"source.clusters.alias"="source"
+"source.bootstrap.servers"=data.aws_msk_cluster.primarykafkacluster.bootstrap_brokers
+"target.bootstrap.servers"=data.aws_msk_cluster.secondarykafkacluster.bootstrap_brokers
+"emit.heartbeats.interval.seconds"=1
+"value.converter"="org.apache.kafka.connect.converters.ByteArrayConverter"
+"key.converter"="org.apache.kafka.connect.converters.ByteArrayConverter"
 }
 
   kafka_cluster {
@@ -412,7 +404,14 @@ resource "aws_mskconnect_connector" "MirrorHeartbeatConnector" {
       revision = aws_mskconnect_custom_plugin.example.latest_revision
     }
   }
-
-  service_execution_role_arn = "arn:aws:iam::100828196990:user/org_arun_developer1"
+log_delivery {
+  worker_log_delivery {
+    cloudwatch_logs {
+      enabled = true
+      log_group = aws_cloudwatch_log_group.mskconnect_MirrorHeartbeatConnector_logs.name
+    }
+  }
+}
+  service_execution_role_arn = "arn:aws:iam::100828196990:role/MSKConnectMirror"
 }
 

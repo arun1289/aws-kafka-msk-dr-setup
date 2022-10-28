@@ -116,46 +116,6 @@ resource "aws_s3_bucket_acl" "bucket_acl" {
   acl    = "private"
 }
 
-resource "aws_iam_role" "firehose_role" {
-  name = "firehose_test_role_secondary"
-
-  assume_role_policy = <<EOF
-{
-"Version": "2012-10-17",
-"Statement": [
-  {
-    "Action": "sts:AssumeRole",
-    "Principal": {
-      "Service": "firehose.amazonaws.com"
-    },
-    "Effect": "Allow",
-    "Sid": ""
-  }
-  ]
-}
-EOF
-}
-
-resource "aws_kinesis_firehose_delivery_stream" "test_stream" {
-  name        = "terraform-kinesis-firehose-msk-broker-logs-stream"
-  destination = "s3"
-
-  s3_configuration {
-    role_arn   = aws_iam_role.firehose_role.arn
-    bucket_arn = aws_s3_bucket.bucket.arn
-  }
-
-  tags = {
-    LogDeliveryEnabled = "placeholder"
-  }
-
-  lifecycle {
-    ignore_changes = [
-      tags["LogDeliveryEnabled"],
-    ]
-  }
-}
-
 resource "aws_msk_cluster" "secondarykafkacluster" {
   cluster_name           = "secondarykafkacluster"
   kafka_version          = "3.2.0"
@@ -184,7 +144,11 @@ resource "aws_msk_cluster" "secondarykafkacluster" {
   }
 
 client_authentication {
-  unauthenticated = true
+ unauthenticated = true
+ sasl {
+   iam = true
+   scram = true
+ }
 }
 
   open_monitoring {
@@ -204,10 +168,6 @@ client_authentication {
         enabled   = true
         log_group = aws_cloudwatch_log_group.test.name
       }
-      firehose {
-        enabled         = true
-        delivery_stream = aws_kinesis_firehose_delivery_stream.test_stream.name
-      }
       s3 {
         enabled = true
         bucket  = aws_s3_bucket.bucket.id
@@ -221,30 +181,3 @@ client_authentication {
   }
 }
 
-resource "aws_network_interface" "ani" {
-  subnet_id   = aws_subnet.subnet_az1.id
-   tags = {
-    Name = "primary_network_interface"
-  }
-}
-
-resource "aws_instance" "awskafkaclient" {
-  ami           = "ami-005e54dee72cc1d00" # us-west-2
-  instance_type = "t2.micro"
-  network_interface {
-    network_interface_id = aws_network_interface.ani.id
-    device_index         = 0
-  }
-
-  credit_specification {
-    cpu_credits = "unlimited"
-  }
-}
-output "zookeeper_connect_string" {
-  value = aws_msk_cluster.secondarykafkacluster.zookeeper_connect_string
-}
-
-output "bootstrap_brokers_tls" {
-  description = "TLS connection host:port pairs"
-  value       = aws_msk_cluster.secondarykafkacluster.bootstrap_brokers
-}

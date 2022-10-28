@@ -189,7 +189,11 @@ resource "aws_msk_cluster" "primarykafkacluster" {
     }
   }
 client_authentication {
-  unauthenticated = true
+ unauthenticated = true
+ sasl {
+   iam = true
+   scram = true
+ }
 }
   open_monitoring {
     prometheus {
