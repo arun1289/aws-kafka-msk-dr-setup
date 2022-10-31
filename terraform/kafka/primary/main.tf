@@ -14,93 +14,48 @@ provider "aws" {
 }
 
 
-resource "aws_vpc" "vpc" {
-  cidr_block = "192.168.0.0/22"
-  enable_dns_hostnames = true
-  enable_dns_support = true
-    tags = {
-    Name = "primaryvpc_mskcluster"
-  }
-  }
-
-resource "aws_internet_gateway" "gw" {
-  vpc_id = aws_vpc.vpc.id
- 
-  tags = {
-    Name = "primary_internet_gateway"
-  }
-  depends_on = [
-    aws_vpc.vpc
-  ]
-}
-
-data "aws_route_table" "primaryvpc_mskcluster_routetable" {
-  vpc_id = aws_vpc.vpc.id
-}
+data "aws_vpc" "primaryvpc" {
+cidr_block = "192.168.0.0/22"
+}  
 
 data "aws_availability_zones" "azs" {
   state = "available"
 }
 
-resource "aws_route" "primaryvpc_mskcluster_route_gatewaytraffic" {
-  route_table_id            = data.aws_route_table.primaryvpc_mskcluster_routetable.id
-  destination_cidr_block    = "0.0.0.0/0"
-  gateway_id = aws_internet_gateway.gw.id
-}
 
-resource "aws_subnet" "subnet_az1" {
+data "aws_subnet" "subnet_az1" {
   availability_zone = data.aws_availability_zones.azs.names[0]
   cidr_block        = "192.168.0.0/24"
-  vpc_id            = aws_vpc.vpc.id
-  map_public_ip_on_launch = true
-  depends_on = [
-    aws_vpc.vpc
-  ]
-   tags = {
-    Name = "primaryvpcsubnet1_mskcluster"
-  }
+  vpc_id            = data.aws_vpc.primaryvpc.id
 }
 
-resource "aws_subnet" "subnet_az2" {
+data "aws_subnet" "subnet_az2" {
   availability_zone = data.aws_availability_zones.azs.names[1]
   cidr_block        = "192.168.1.0/24"
-  vpc_id            = aws_vpc.vpc.id
-    depends_on = [
-    aws_vpc.vpc
-  ]
-     tags = {
-    Name = "primaryvpcsubnet2_mskcluster"
-  }
+  vpc_id            = data.aws_vpc.primaryvpc.id
 }
 
-resource "aws_subnet" "subnet_az3" {
+data "aws_subnet" "subnet_az3" {
   availability_zone = data.aws_availability_zones.azs.names[2]
   cidr_block        = "192.168.2.0/24"
-  vpc_id            = aws_vpc.vpc.id
-    depends_on = [
-    aws_vpc.vpc
-  ]
-     tags = {
-    Name = "primaryvpcsubnet3_mskcluster"
-  }
+  vpc_id            = data.aws_vpc.primaryvpc.id
 }
 
 resource "aws_security_group" "sg" {
-  vpc_id = aws_vpc.vpc.id
+  vpc_id = data.aws_vpc.primaryvpc.id
   revoke_rules_on_delete = true
      ingress {
     description      = "TLS from VPC"
     from_port        = 0
     to_port          = 0
     protocol         = "-1"
-    
     cidr_blocks      = ["0.0.0.0/0"]
     }
          tags = {
     Name = "primaryvpcsecurity_mskcluster"
   }
   depends_on = [
-    aws_vpc.vpc
+    data.aws_vpc.primaryvpc
   ]
 }
 
@@ -112,55 +67,6 @@ resource "aws_cloudwatch_log_group" "test" {
   name = "msk_broker_logs"
 }
 
-resource "aws_s3_bucket" "bucket" {
-  bucket = "msk-broker-logs-bucket-coremont-sandbox-primary"
-  force_destroy = true
-}
-
-resource "aws_s3_bucket_acl" "bucket_acl" {
-  bucket = aws_s3_bucket.bucket.id
-  acl    = "private"
-}
-
-resource "aws_iam_role" "firehose_role" {
-  name = "firehose_test_role"
-
-  assume_role_policy = <<EOF
-{
-"Version": "2012-10-17",
-"Statement": [
-  {
-    "Action": "sts:AssumeRole",
-    "Principal": {
-      "Service": "firehose.amazonaws.com"
-    },
-    "Effect": "Allow",
-    "Sid": ""
-  }
-  ]
-}
-EOF
-}
-
-resource "aws_kinesis_firehose_delivery_stream" "test_stream" {
-  name        = "terraform-kinesis-firehose-msk-broker-logs-stream"
-  destination = "s3"
-
-  s3_configuration {
-    role_arn   = aws_iam_role.firehose_role.arn
-    bucket_arn = aws_s3_bucket.bucket.arn
-  }
-
-  tags = {
-    LogDeliveryEnabled = "placeholder"
-  }
-
-  lifecycle {
-    ignore_changes = [
-      tags["LogDeliveryEnabled"],
-    ]
-  }
-}
 
 resource "aws_msk_cluster" "primarykafkacluster" {
   cluster_name           = "primarykafkacluster"
@@ -170,9 +76,9 @@ resource "aws_msk_cluster" "primarykafkacluster" {
   broker_node_group_info {
     instance_type = "kafka.m5.large"
     client_subnets = [
-      aws_subnet.subnet_az1.id,
-      aws_subnet.subnet_az2.id,
-      aws_subnet.subnet_az3.id,
+      data.aws_subnet.subnet_az1.id,
+      data.aws_subnet.subnet_az2.id,
+      data.aws_subnet.subnet_az3.id,
     ]
     storage_info {
       ebs_storage_info {
@@ -211,15 +117,6 @@ client_authentication {
       cloudwatch_logs {
         enabled   = true
         log_group = aws_cloudwatch_log_group.test.name
-      }
-      firehose {
-        enabled         = true
-        delivery_stream = aws_kinesis_firehose_delivery_stream.test_stream.name
-      }
-      s3 {
-        enabled = true
-        bucket  = aws_s3_bucket.bucket.id
-        prefix  = "logs/msk-"
       }
     }
   }
