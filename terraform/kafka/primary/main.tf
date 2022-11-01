@@ -1,57 +1,42 @@
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 4.16"
-    }
-  }
-
-  required_version = ">= 1.2.0"
-}
-
-provider "aws" {
-  region  = "eu-west-1"
-}
-
-
 data "aws_vpc" "primaryvpc" {
-cidr_block = "192.168.0.0/22"
-}  
+  provider = aws.ireland
+  cidr_block = "10.31.188.0/22"
+}
 
 data "aws_availability_zones" "azs" {
   state = "available"
 }
 
-
 data "aws_subnet" "subnet_az1" {
   availability_zone = data.aws_availability_zones.azs.names[0]
-  cidr_block        = "192.168.0.0/24"
+  cidr_block        = "10.31.188.0/24"
   vpc_id            = data.aws_vpc.primaryvpc.id
 }
 
 data "aws_subnet" "subnet_az2" {
   availability_zone = data.aws_availability_zones.azs.names[1]
-  cidr_block        = "192.168.1.0/24"
+  cidr_block        = "10.31.189.0/24"
   vpc_id            = data.aws_vpc.primaryvpc.id
 }
 
 data "aws_subnet" "subnet_az3" {
   availability_zone = data.aws_availability_zones.azs.names[2]
-  cidr_block        = "192.168.2.0/24"
+  cidr_block        = "10.31.190.0/24"
   vpc_id            = data.aws_vpc.primaryvpc.id
 }
 
 resource "aws_security_group" "sg" {
-  vpc_id = data.aws_vpc.primaryvpc.id
+  vpc_id                 = data.aws_vpc.primaryvpc.id
   revoke_rules_on_delete = true
-     ingress {
-    description      = "TLS from VPC"
-    from_port        = 0
-    to_port          = 0
-    protocol         = "-1"
-    cidr_blocks      = ["0.0.0.0/0"]
-    }
-         tags = {
+  ingress {
+    description = "TLS from VPC"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
     Name = "primaryvpcsecurity_mskcluster"
   }
   depends_on = [
@@ -69,12 +54,12 @@ resource "aws_cloudwatch_log_group" "test" {
 
 
 resource "aws_msk_cluster" "primarykafkacluster" {
-  cluster_name           = "primarykafkacluster"
+  cluster_name           = "o2-msk-primary"
   kafka_version          = "3.2.0"
   number_of_broker_nodes = 3
 
   broker_node_group_info {
-    instance_type = "kafka.m5.large"
+    instance_type  = "kafka.m5.large"
     client_subnets = [
       data.aws_subnet.subnet_az1.id,
       data.aws_subnet.subnet_az2.id,
@@ -94,13 +79,15 @@ resource "aws_msk_cluster" "primarykafkacluster" {
       client_broker = "TLS_PLAINTEXT"
     }
   }
-client_authentication {
- unauthenticated = true
- sasl {
-   iam = true
-   scram = true
- }
-}
+
+  client_authentication {
+    unauthenticated = true
+    sasl {
+      iam   = true
+      scram = true
+    }
+  }
+
   open_monitoring {
     prometheus {
       jmx_exporter {
@@ -122,7 +109,8 @@ client_authentication {
   }
 
   tags = {
-    foo = "bar"
+    Name        = "o2-msk-primary"
+    Environment = "non-prod"
   }
 }
 
