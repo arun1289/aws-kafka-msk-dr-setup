@@ -156,9 +156,10 @@ resource "aws_mskconnect_connector" "MirrorSourceConnector" {
     "topics"                            = ".*"
     "groups"                            = ".*"
     "emit.checkpoints.interval.seconds" = 1
-    "source.cluster.alias"              = "source"
-    "source.bootstrap.servers"          = data.aws_msk_cluster.primarykafkacluster.bootstrap_brokers
-    "target.bootstrap.servers"          = data.aws_msk_cluster.secondarykafkacluster.bootstrap_brokers
+    "source.cluster.alias"="source"
+    "source.bootstrap.servers"="${data.aws_msk_cluster.primarykafkacluster.bootstrap_brokers}"
+    "target.bootstrap.servers"="${data.aws_msk_cluster.secondarykafkacluster.bootstrap_brokers}"
+
     "emit.heartbeats.interval.seconds"  = 1
     "value.converter"                   = "org.apache.kafka.connect.converters.ByteArrayConverter"
     "key.converter"                     = "org.apache.kafka.connect.converters.ByteArrayConverter"
@@ -166,7 +167,7 @@ resource "aws_mskconnect_connector" "MirrorSourceConnector" {
 
   kafka_cluster {
     apache_kafka_cluster {
-      bootstrap_servers = data.aws_msk_cluster.secondarykafkacluster.bootstrap_brokers
+      bootstrap_servers = "${data.aws_msk_cluster.secondarykafkacluster.bootstrap_brokers}"
 
       vpc {
         security_groups = [aws_security_group.sg.id]
@@ -241,8 +242,8 @@ resource "aws_mskconnect_connector" "MirrorCheckpointConnector" {
     "groups"                            = ".*"
     "emit.checkpoints.interval.seconds" = 1
     "source.cluster.alias"              = "source"
-    "source.bootstrap.servers"          = data.aws_msk_cluster.primarykafkacluster.bootstrap_brokers
-    "target.bootstrap.servers"          = data.aws_msk_cluster.secondarykafkacluster.bootstrap_brokers
+    "source.bootstrap.servers"="${data.aws_msk_cluster.primarykafkacluster.bootstrap_brokers}"
+    "target.bootstrap.servers"="${data.aws_msk_cluster.secondarykafkacluster.bootstrap_brokers}"
     "emit.heartbeats.interval.seconds"  = 1
     "value.converter"                   = "org.apache.kafka.connect.converters.ByteArrayConverter"
     "key.converter"                     = "org.apache.kafka.connect.converters.ByteArrayConverter"
@@ -250,7 +251,7 @@ resource "aws_mskconnect_connector" "MirrorCheckpointConnector" {
 
   kafka_cluster {
     apache_kafka_cluster {
-      bootstrap_servers = data.aws_msk_cluster.secondarykafkacluster.bootstrap_brokers
+      bootstrap_servers = "${data.aws_msk_cluster.secondarykafkacluster.bootstrap_brokers}"
 
       vpc {
         security_groups = [aws_security_group.sg.id]
@@ -323,8 +324,8 @@ resource "aws_mskconnect_connector" "MirrorHeartbeatConnector" {
     "groups"                            = ".*"
     "emit.checkpoints.interval.seconds" = 1
     "source.cluster.alias"              = "source"
-    "source.bootstrap.servers"          = data.aws_msk_cluster.primarykafkacluster.bootstrap_brokers
-    "target.bootstrap.servers"          = data.aws_msk_cluster.secondarykafkacluster.bootstrap_brokers
+    "source.bootstrap.servers"          = "${data.aws_msk_cluster.primarykafkacluster.bootstrap_brokers}"
+    "target.bootstrap.servers"          = "${data.aws_msk_cluster.secondarykafkacluster.bootstrap_brokers}"
     "emit.heartbeats.interval.seconds"  = 1
     "value.converter"                   = "org.apache.kafka.connect.converters.ByteArrayConverter"
     "key.converter"                     = "org.apache.kafka.connect.converters.ByteArrayConverter"
@@ -332,7 +333,7 @@ resource "aws_mskconnect_connector" "MirrorHeartbeatConnector" {
 
   kafka_cluster {
     apache_kafka_cluster {
-      bootstrap_servers = data.aws_msk_cluster.secondarykafkacluster.bootstrap_brokers
+      bootstrap_servers = "${data.aws_msk_cluster.secondarykafkacluster.bootstrap_brokers}"
 
       vpc {
         security_groups = [aws_security_group.sg.id]
