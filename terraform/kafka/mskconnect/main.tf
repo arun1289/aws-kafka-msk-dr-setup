@@ -9,28 +9,33 @@ data "aws_vpc" "primaryvpc" {
 }
 
 data "aws_availability_zones" "azs" {
-  state = "available"
+  provider = aws.ireland
+  state    = "available"
 }
 
 data "aws_subnet" "subnet_az1" {
+  provider          = aws.london
   availability_zone = data.aws_availability_zones.azs.names[0]
-  cidr_block        = "10.31.188.0/24"
-  vpc_id            = data.aws_vpc.primaryvpc.id
+  cidr_block        = "172.31.16.0/20"
+  vpc_id            = data.aws_vpc.secondaryvpc.id
 }
 
 data "aws_subnet" "subnet_az2" {
+  provider          = aws.london
   availability_zone = data.aws_availability_zones.azs.names[1]
-  cidr_block        = "10.31.189.0/24"
-  vpc_id            = data.aws_vpc.primaryvpc.id
+  cidr_block        = "172.31.32.0/20"
+  vpc_id            = data.aws_vpc.secondaryvpc.id
 }
 
 data "aws_subnet" "subnet_az3" {
+  provider          = aws.london
   availability_zone = data.aws_availability_zones.azs.names[2]
-  cidr_block        = "10.31.190.0/24"
-  vpc_id            = data.aws_vpc.primaryvpc.id
+  cidr_block        = "172.31.0.0/20"
+  vpc_id            = data.aws_vpc.secondaryvpc.id
 }
 
 data "aws_msk_cluster" "secondarykafkacluster" {
+  provider     = aws.london
   cluster_name = "secondarykafkacluster"
 }
 
@@ -41,7 +46,8 @@ data "aws_msk_cluster" "primarykafkacluster" {
 
 
 resource "aws_security_group" "sg" {
-  vpc_id = data.aws_vpc.secondaryvpc.id
+  provider = aws.london
+  vpc_id   = data.aws_vpc.secondaryvpc.id
   ingress {
     description = "TLS from VPC"
     from_port   = 0
@@ -76,17 +82,21 @@ resource "aws_s3_object" "mm2object" {
 }
 
 resource "aws_cloudwatch_log_group" "mskconnect_MirrorSourceConnector_logs" {
-  name = "mskconnect_MirrorSourceConnector_logs"
+  provider = aws.london
+  name     = "mskconnect_MirrorSourceConnector_logs"
 }
 
 resource "aws_cloudwatch_log_group" "mskconnect_MirrorCheckpointConnector_logs" {
-  name = "mskconnect_MirrorCheckpointConnector_logs"
+  provider = aws.london
+  name     = "mskconnect_MirrorCheckpointConnector_logs"
 }
 resource "aws_cloudwatch_log_group" "mskconnect_MirrorHeartbeatConnector_logs" {
-  name = "mskconnect_MirrorHeartbeatConnector_logs"
+  provider = aws.london
+  name     = "mskconnect_MirrorHeartbeatConnector_logs"
 }
 
 resource "aws_mskconnect_custom_plugin" "example" {
+  provider     = aws.london
   name         = "MSKConnectPlugin"
   content_type = "ZIP"
   location {
@@ -99,7 +109,8 @@ resource "aws_mskconnect_custom_plugin" "example" {
 
 
 resource "aws_mskconnect_connector" "MirrorSourceConnector" {
-  name = "MirrorSourceConnector"
+  provider = aws.london
+  name     = "MirrorSourceConnector"
 
   kafkaconnect_version = "2.7.1"
 
@@ -182,7 +193,8 @@ resource "aws_mskconnect_connector" "MirrorSourceConnector" {
 
 
 resource "aws_mskconnect_connector" "MirrorCheckpointConnector" {
-  name = "MirrorCheckpointConnector"
+  provider = aws.london
+  name     = "MirrorCheckpointConnector"
 
   kafkaconnect_version = "2.7.1"
 
@@ -262,6 +274,7 @@ resource "aws_mskconnect_connector" "MirrorCheckpointConnector" {
 }
 
 resource "aws_mskconnect_connector" "MirrorHeartbeatConnector" {
+  provider = aws.london
   name = "MirrorHeartbeatConnector"
 
   kafkaconnect_version = "2.7.1"

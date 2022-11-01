@@ -1,5 +1,8 @@
+provider "aws" {
+  region = "eu-west-1"
+}
+
 data "aws_vpc" "primaryvpc" {
-  provider = aws.ireland
   cidr_block = "10.31.188.0/22"
 }
 

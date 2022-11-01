@@ -1,10 +1,21 @@
+provider "aws" {
+  region = "eu-west-2"
+}
+
 data "aws_vpc" "secondaryvpc" {
-  provider = aws.london
   cidr_block = "172.31.0.0/16"
+}
+
+output "print_vpc_id" {
+  value = data.aws_vpc.secondaryvpc.id
 }
 
 data "aws_availability_zones" "azs" {
   state = "available"
+}
+
+output "print_aws_availability_zones" {
+  value = data.aws_availability_zones.azs.names
 }
 
 data "aws_subnet" "subnet_az1" {
@@ -47,7 +58,7 @@ resource "aws_cloudwatch_log_group" "test" {
 }
 
 resource "aws_msk_cluster" "secondarykafkacluster" {
-  cluster_name           = "secondarykafkacluster"
+  cluster_name           = "o2-msk-secondary"
   kafka_version          = "3.2.0"
   number_of_broker_nodes = 3
 
@@ -102,7 +113,7 @@ resource "aws_msk_cluster" "secondarykafkacluster" {
   }
 
   tags = {
-    foo = "bar"
+    Name = "o2-msk-secondary"
   }
 }
 
