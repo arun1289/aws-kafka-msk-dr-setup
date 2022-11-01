@@ -14,6 +14,10 @@ provider "aws" {
     region = "us-west-2"
 }
 
+data "aws_caller_identity" "accountdetails" {
+  
+}
+
 resource "aws_iam_role" "MSKConnectMirrorRole" {
   name = "MSKConnectMirror"
 
@@ -31,7 +35,7 @@ resource "aws_iam_role" "MSKConnectMirrorRole" {
 		{
 			"Effect": "Allow",
 			"Principal": {
-				"AWS": "arn:aws:sts::100828196990:assumed-role/MSKConnectMirror/100828196990"
+				"AWS": "arn:aws:sts::${data.aws_caller_identity.accountdetails.account_id}:assumed-role/MSKConnectMirror/${data.aws_caller_identity.accountdetails.account_id}"
 			},
 			"Action": "sts:AssumeRole"
 		}

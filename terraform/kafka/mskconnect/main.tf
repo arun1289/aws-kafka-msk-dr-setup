@@ -366,3 +366,15 @@ log_delivery {
   ]
 }
 
+output "account_id" {
+  value = data.aws_caller_identity.accountdetails.account_id
+}
+
+output "caller_user" {
+  value = data.aws_caller_identity.accountdetails.user_id
+}
+
+output "caller_arn" {
+  value = data.aws_caller_identity.accountdetails.arn
+}
+
