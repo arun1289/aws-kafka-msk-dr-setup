@@ -32,8 +32,12 @@ data "aws_availability_zones" "azs" {
   state = "available"
 }
 
+data "aws_caller_identity" "accountdetails" {
+  
+}
+
 resource "aws_vpc_peering_connection" "vpcconnection" {
-  peer_owner_id = "100828196990"
+  peer_owner_id = data.aws_caller_identity.accountdetails.account_id
   peer_vpc_id   = data.aws_vpc.primaryvpc.id
   vpc_id        = data.aws_vpc.secondaryvpc.id
   peer_region   = "eu-west-1"

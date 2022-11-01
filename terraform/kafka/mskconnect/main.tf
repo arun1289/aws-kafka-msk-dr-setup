@@ -1,3 +1,18 @@
+
+provider "aws" {
+    alias = "london"
+    region = "us-west-2"
+}
+
+provider "aws" {
+  alias = "ireland"
+  region = "eu-west-1"
+}
+
+data "aws_caller_identity" "accountdetails" {
+  
+}
+
 data "aws_vpc" "secondaryvpc" {
   provider   = aws.london
   cidr_block = "172.31.0.0/16"
@@ -44,6 +59,9 @@ data "aws_msk_cluster" "primarykafkacluster" {
   cluster_name = "primarykafkacluster"
 }
 
+data "aws_iam_role" "MSKConnectMirrorRole" {
+  name = "MSKConnectMirror"
+}
 
 resource "aws_security_group" "sg" {
   provider = aws.london
@@ -185,8 +203,8 @@ resource "aws_mskconnect_connector" "MirrorSourceConnector" {
     }
   }
 
-  service_execution_role_arn = "arn:aws:iam::100828196990:role/MSKConnectMirror"
-  depends_on                 = [
+  service_execution_role_arn = data.aws_caller_identity.accountdetails.arn
+  depends_on = [
     aws_mskconnect_custom_plugin.example
   ]
 }
@@ -267,8 +285,9 @@ resource "aws_mskconnect_connector" "MirrorCheckpointConnector" {
       }
     }
   }
-  service_execution_role_arn = "arn:aws:iam::100828196990:role/MSKConnectMirror"
-  depends_on                 = [
+  
+  service_execution_role_arn = data.aws_caller_identity.accountdetails.arn
+  depends_on = [
     aws_mskconnect_custom_plugin.example
   ]
 }
@@ -348,9 +367,23 @@ resource "aws_mskconnect_connector" "MirrorHeartbeatConnector" {
       }
     }
   }
-  service_execution_role_arn = "arn:aws:iam::100828196990:role/MSKConnectMirror"
-  depends_on                 = [
+ 
+ 
+  service_execution_role_arn = data.aws_caller_identity.accountdetails.arn
+  depends_on = [
     aws_mskconnect_custom_plugin.example
   ]
+}
+
+output "account_id" {
+  value = data.aws_caller_identity.accountdetails.account_id
+}
+
+output "caller_user" {
+  value = data.aws_caller_identity.accountdetails.user_id
+}
+
+output "caller_arn" {
+  value = data.aws_caller_identity.accountdetails.arn
 }
 

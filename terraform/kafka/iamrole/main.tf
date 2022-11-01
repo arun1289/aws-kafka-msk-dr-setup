@@ -1,4 +1,8 @@
 
+data "aws_caller_identity" "accountdetails" {
+  
+}
+
 resource "aws_iam_role" "MSKConnectMirrorRole" {
   name = "MSKConnectMirror"
 
@@ -12,16 +16,17 @@ resource "aws_iam_role" "MSKConnectMirrorRole" {
 				"Service": "kafkaconnect.amazonaws.com"
 			},
 			"Action": "sts:AssumeRole"
+		},
+    #      this doesn't work or I don't understand what it should be changed to. 100828196990 is account number
+    #      what exactly this policy is doing?
+		{
+			"Effect": "Allow",
+			"Principal": {
+				"AWS": "arn:aws:sts::${data.aws_caller_identity.accountdetails.account_id}:assumed-role/MSKConnectMirror/${data.aws_caller_identity.accountdetails.account_id}"
+			},
+			"Action": "sts:AssumeRole"
+
 		}
-#      this doesn't work or I don't understand what it should be changed to. 100828196990 is account number
-#      what exactly this policy is doing?
-#        ,{
-#			"Effect": "Allow",
-#			"Principal": {
-#				"AWS": "arn:aws:sts::100828196990:assumed-role/MSKConnectMirror/100828196990"
-#			},
-#			"Action": "sts:AssumeRole"
-#		}
 	]
 }
 )
