@@ -1,0 +1,44 @@
+connector.class=org.apache.kafka.connect.mirror.MirrorSourceConnector
+target.cluster.alias=target
+sync.topic.acls.enabled=false
+tasks.max=1
+topics=.*
+emit.checkpoints.interval.seconds=1
+source.cluster.alias=source
+target.cluster.bootstrap.servers=<secondary servers>
+groups=consumer-group-.*
+emit.heartbeats.interval.seconds=1
+source.cluster.bootstrap.servers=<primary servers>
+value.converter=org.apache.kafka.connect.converters.ByteArrayConverter
+key.converter=org.apache.kafka.connect.converters.ByteArrayConverter
+
+
+connector.class=org.apache.kafka.connect.mirror.MirrorCheckpointConnector
+target.cluster.alias=target
+sync.topic.acls.enabled=false
+tasks.max=1
+topics=.*
+emit.checkpoints.interval.seconds=1
+source.cluster.alias=source
+target.cluster.bootstrap.servers=<secondary servers>
+groups=consumer-group-.*
+emit.heartbeats.interval.seconds=1
+source.cluster.bootstrap.servers=<primary servers>
+value.converter=org.apache.kafka.connect.converters.ByteArrayConverter
+key.converter=org.apache.kafka.connect.converters.ByteArrayConverter
+
+
+
+connector.class=org.apache.kafka.connect.mirror.MirrorHeartbeatConnector
+target.cluster.alias=target
+sync.topic.acls.enabled=false
+tasks.max=1
+topics=.*
+emit.checkpoints.interval.seconds=1
+source.cluster.alias=source
+target.cluster.bootstrap.servers=<secondary servers>
+groups=consumer-group-.*
+emit.heartbeats.interval.seconds=1
+source.cluster.bootstrap.servers=<primary servers>
+value.converter=org.apache.kafka.connect.converters.ByteArrayConverter
+key.converter=org.apache.kafka.connect.converters.ByteArrayConverter
