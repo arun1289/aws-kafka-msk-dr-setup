@@ -20,6 +20,10 @@ alias = "ireland"
 
 }
 
+data "aws_caller_identity" "accountdetails" {
+  
+}
+
 data "aws_vpc" "secondaryvpc" {
   cidr_block = "10.0.0.0/16"
   }
@@ -60,6 +64,9 @@ data "aws_msk_cluster" "primarykafkacluster" {
   cluster_name           = "primarykafkacluster"
 }
 
+data "aws_iam_role" "MSKConnectMirrorRole" {
+  name = "MSKConnectMirror"
+}
 
 resource "aws_security_group" "sg" {
   vpc_id = data.aws_vpc.secondaryvpc.id
@@ -194,7 +201,7 @@ log_delivery {
   }
 }
 
-  service_execution_role_arn = "arn:aws:iam::100828196990:role/MSKConnectMirror"
+  service_execution_role_arn = data.aws_caller_identity.accountdetails.arn
   depends_on = [
     aws_mskconnect_custom_plugin.example
   ]
@@ -274,7 +281,7 @@ log_delivery {
     }
   }
 }
-  service_execution_role_arn = "arn:aws:iam::100828196990:role/MSKConnectMirror"
+  service_execution_role_arn = data.aws_caller_identity.accountdetails.arn
   depends_on = [
     aws_mskconnect_custom_plugin.example
   ]
@@ -353,7 +360,7 @@ log_delivery {
     }
   }
 }
-  service_execution_role_arn = "arn:aws:iam::100828196990:role/MSKConnectMirror"
+  service_execution_role_arn = data.aws_caller_identity.accountdetails.arn
   depends_on = [
     aws_mskconnect_custom_plugin.example
   ]
