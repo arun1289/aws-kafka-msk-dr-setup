@@ -1,18 +1,3 @@
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 4.16"
-    }
-  }
-
-  required_version = ">= 1.2.0"
-}
-
-
-provider "aws" {
-    region = "us-west-2"
-}
 
 data "aws_caller_identity" "accountdetails" {
   
@@ -32,12 +17,15 @@ resource "aws_iam_role" "MSKConnectMirrorRole" {
 			},
 			"Action": "sts:AssumeRole"
 		},
+    #      this doesn't work or I don't understand what it should be changed to. 100828196990 is account number
+    #      what exactly this policy is doing?
 		{
 			"Effect": "Allow",
 			"Principal": {
 				"AWS": "arn:aws:sts::${data.aws_caller_identity.accountdetails.account_id}:assumed-role/MSKConnectMirror/${data.aws_caller_identity.accountdetails.account_id}"
 			},
 			"Action": "sts:AssumeRole"
+
 		}
 	]
 }
