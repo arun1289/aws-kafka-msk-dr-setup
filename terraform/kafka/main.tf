@@ -39,6 +39,10 @@ module "secondary" {
   source = "./secondary"
 }
 
-#module "mskconnect" {
-#  source = "./mskconnect"
-#}
+module "vpcpeering" {
+  source = "./vpc/vpcpeering"
+}
+
+module "mskconnect" {
+  source = "./mskconnect"
+}
