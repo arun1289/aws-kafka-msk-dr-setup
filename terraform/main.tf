@@ -64,21 +64,29 @@ module "secondary" {
 module "mssql" {
   source = "./mssql"
   providers = {
-    aws.primary = aws.primary
-    aws.secondary = aws.secondary
+    aws = aws.primary
   }
 
-  primary_region = var.primary_region
-  primary_vpc = var.primary_vpc
-  primary_subnet_zone_a = var.primary_subnet_zone_a
-  primary_subnet_zone_b = var.primary_subnet_zone_b
-  primary_subnet_zone_c = var.primary_subnet_zone_c
+  region = var.primary_region
+  vpc = var.primary_vpc
+  subnet_zone_a = var.primary_subnet_zone_a
+  subnet_zone_b = var.primary_subnet_zone_b
+  subnet_zone_c = var.primary_subnet_zone_c
+  ami = "ami-01a7dbc42af9e1c67"
+}
 
-  secondary_region = var.secondary_region
-  secondary_vpc = var.secondary_vpc
-  secondary_subnet_zone_a = var.secondary_subnet_zone_a
-  secondary_subnet_zone_b = var.secondary_subnet_zone_b
-  secondary_subnet_zone_c = var.secondary_subnet_zone_c
+module "mssql_secondary" {
+  source = "./mssql"
+  providers = {
+    aws = aws.secondary
+  }
+
+  region = var.secondary_region
+  vpc = var.secondary_vpc
+  subnet_zone_a = var.secondary_subnet_zone_a
+  subnet_zone_b = var.secondary_subnet_zone_b
+  subnet_zone_c = var.secondary_subnet_zone_c
+  ami = "ami-0aff4bb8856819032"
 }
 
 module "mskconnect" {
