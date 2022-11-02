@@ -1,45 +1,50 @@
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 4.16"
-    }
-  }
-
-  required_version = ">= 1.2.0"
+provider "aws" {
+  region = var.primary_region
 }
 
 provider "aws" {
-  region  = "us-west-2"
+  alias  = "secondary"
+  region = var.secondary_region
 }
 
-
-data "aws_vpc" "secondaryvpc" {
-  cidr_block = "10.0.0.0/16"
-  }
+data "aws_vpc" "primary_vpc" {
+  provider   = aws.primary
+  cidr_block = var.primary_vpc
+}
 
 data "aws_availability_zones" "azs" {
-  state = "available"
+  provider = aws.primary
+  state    = "available"
 }
 
 data "aws_subnet" "subnet_az1" {
+  provider          = aws.primary
   availability_zone = data.aws_availability_zones.azs.names[0]
-  cidr_block        = "10.0.0.0/24"
-  vpc_id            = data.aws_vpc.secondaryvpc.id
+  cidr_block        = var.primary_subnet_zone_a
+  vpc_id            = data.aws_vpc.primary_vpc.id
 }
 
 data "aws_subnet" "subnet_az2" {
+  provider          = aws.primary
   availability_zone = data.aws_availability_zones.azs.names[1]
-  cidr_block        = "10.0.1.0/24"
-  vpc_id            = data.aws_vpc.secondaryvpc.id
+  cidr_block        = var.primary_subnet_zone_b
+  vpc_id            = data.aws_vpc.primary_vpc.id
 }
 
 data "aws_subnet" "subnet_az3" {
+  provider          = aws.primary
   availability_zone = data.aws_availability_zones.azs.names[2]
-  cidr_block        = "10.0.2.0/24"
-  vpc_id            = data.aws_vpc.secondaryvpc.id
+  cidr_block        = var.primary_subnet_zone_c
+  vpc_id            = data.aws_vpc.primary_vpc.id
 }
 
 resource "aws_instance" "mssql1" {
-  # (resource arguments)
+  provider      = aws.primary
+  ami           = var.ami
+  instance_type = var.instance_type
+
+  network_interface {
+    network_interface_id = var.network_interface_id
+    device_index         = 0
+  }
 }

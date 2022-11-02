@@ -1,9 +1,14 @@
-provider "aws" {
-  region = "eu-west-1"
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = ">= 2.7.0"
+    }
+  }
 }
 
-data "aws_vpc" "primaryvpc" {
-  cidr_block = "10.31.188.0/22"
+data "aws_vpc" "primary_vpc" {
+  cidr_block = var.primary_vpc
 }
 
 data "aws_availability_zones" "azs" {
@@ -12,24 +17,24 @@ data "aws_availability_zones" "azs" {
 
 data "aws_subnet" "subnet_az1" {
   availability_zone = data.aws_availability_zones.azs.names[0]
-  cidr_block        = "10.31.188.0/24"
-  vpc_id            = data.aws_vpc.primaryvpc.id
+  cidr_block        = var.primary_subnet_zone_a
+  vpc_id            = data.aws_vpc.primary_vpc.id
 }
 
 data "aws_subnet" "subnet_az2" {
   availability_zone = data.aws_availability_zones.azs.names[1]
-  cidr_block        = "10.31.189.0/24"
-  vpc_id            = data.aws_vpc.primaryvpc.id
+  cidr_block        = var.primary_subnet_zone_b
+  vpc_id            = data.aws_vpc.primary_vpc.id
 }
 
 data "aws_subnet" "subnet_az3" {
   availability_zone = data.aws_availability_zones.azs.names[2]
-  cidr_block        = "10.31.190.0/24"
-  vpc_id            = data.aws_vpc.primaryvpc.id
+  cidr_block        = var.primary_subnet_zone_c
+  vpc_id            = data.aws_vpc.primary_vpc.id
 }
 
 resource "aws_security_group" "sg" {
-  vpc_id                 = data.aws_vpc.primaryvpc.id
+  vpc_id                 = data.aws_vpc.primary_vpc.id
   revoke_rules_on_delete = true
   ingress {
     description = "TLS from VPC"
@@ -43,7 +48,7 @@ resource "aws_security_group" "sg" {
     Name = "primaryvpcsecurity_mskcluster"
   }
   depends_on = [
-    data.aws_vpc.primaryvpc
+    data.aws_vpc.primary_vpc
   ]
 }
 

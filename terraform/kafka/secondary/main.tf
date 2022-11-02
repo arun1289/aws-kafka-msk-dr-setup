@@ -1,43 +1,40 @@
-provider "aws" {
-  region = "eu-west-2"
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = ">= 2.7.0"
+    }
+  }
 }
 
-data "aws_vpc" "secondaryvpc" {
-  cidr_block = "172.31.0.0/16"
-}
-
-output "print_vpc_id" {
-  value = data.aws_vpc.secondaryvpc.id
+data "aws_vpc" "secondary_vpc" {
+  cidr_block = var.secondary_vpc
 }
 
 data "aws_availability_zones" "azs" {
   state = "available"
 }
 
-output "print_aws_availability_zones" {
-  value = data.aws_availability_zones.azs.names
-}
-
 data "aws_subnet" "subnet_az1" {
   availability_zone = data.aws_availability_zones.azs.names[0]
-  cidr_block        = "172.31.16.0/20"
-  vpc_id            = data.aws_vpc.secondaryvpc.id
+  cidr_block        = var.secondary_subnet_zone_a
+  vpc_id            = data.aws_vpc.secondary_vpc.id
 }
 
 data "aws_subnet" "subnet_az2" {
   availability_zone = data.aws_availability_zones.azs.names[1]
-  cidr_block        = "172.31.32.0/20"
-  vpc_id            = data.aws_vpc.secondaryvpc.id
+  cidr_block        = var.secondary_subnet_zone_b
+  vpc_id            = data.aws_vpc.secondary_vpc.id
 }
 
 data "aws_subnet" "subnet_az3" {
   availability_zone = data.aws_availability_zones.azs.names[2]
-  cidr_block        = "172.31.0.0/20"
-  vpc_id            = data.aws_vpc.secondaryvpc.id
+  cidr_block        = var.secondary_subnet_zone_c
+  vpc_id            = data.aws_vpc.secondary_vpc.id
 }
 
 resource "aws_security_group" "sg" {
-  vpc_id                 = data.aws_vpc.secondaryvpc.id
+  vpc_id                 = data.aws_vpc.secondary_vpc.id
   revoke_rules_on_delete = true
   ingress {
     description = "TLS from VPC"

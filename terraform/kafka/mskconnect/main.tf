@@ -1,62 +1,71 @@
-provider "aws" {
-  region = "eu-west-2"
-}
-
-provider "aws" {
-  alias  = "ireland"
-  region = "eu-west-1"
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = ">= 2.7.0"
+      configuration_aliases = [ aws.primary, aws.secondary ]
+    }
+  }
 }
 
 data "aws_caller_identity" "accountdetails" {
-
+  provider = aws.secondary
 }
 
-data "aws_vpc" "secondaryvpc" {
-  cidr_block = "172.31.0.0/16"
+data "aws_vpc" "secondary_vpc" {
+  provider = aws.secondary
+  cidr_block = var.secondary_vpc
 }
 
-data "aws_vpc" "primaryvpc" {
-  provider   = aws.ireland
-  cidr_block = "10.31.188.0/22"
+data "aws_vpc" "primary_vpc" {
+  provider   = aws.primary
+  cidr_block = var.primary_vpc
 }
 
 data "aws_availability_zones" "azs" {
+  provider = aws.secondary
   state    = "available"
 }
 
 data "aws_subnet" "subnet_az1" {
+  provider = aws.secondary
   availability_zone = data.aws_availability_zones.azs.names[0]
-  cidr_block        = "172.31.16.0/20"
-  vpc_id            = data.aws_vpc.secondaryvpc.id
+  cidr_block        = var.secondary_subnet_zone_a
+  vpc_id            = data.aws_vpc.secondary_vpc.id
 }
 
 data "aws_subnet" "subnet_az2" {
+  provider = aws.secondary
   availability_zone = data.aws_availability_zones.azs.names[1]
-  cidr_block        = "172.31.32.0/20"
-  vpc_id            = data.aws_vpc.secondaryvpc.id
+  cidr_block        = var.secondary_subnet_zone_b
+  vpc_id            = data.aws_vpc.secondary_vpc.id
 }
 
 data "aws_subnet" "subnet_az3" {
+  provider = aws.secondary
   availability_zone = data.aws_availability_zones.azs.names[2]
-  cidr_block        = "172.31.0.0/20"
-  vpc_id            = data.aws_vpc.secondaryvpc.id
+  cidr_block        = var.secondary_subnet_zone_c
+  vpc_id            = data.aws_vpc.secondary_vpc.id
 }
 
 data "aws_msk_cluster" "secondarykafkacluster" {
+  provider = aws.secondary
   cluster_name = "o2-msk-secondary"
 }
 
 data "aws_msk_cluster" "primarykafkacluster" {
-  provider     = aws.ireland
+  provider     = aws.primary
   cluster_name = "o2-msk-primary"
 }
 
 data "aws_iam_role" "MSKConnectMirrorRole" {
+  provider = aws.secondary
   name = "MSKConnectMirror"
 }
 
 resource "aws_security_group" "sg" {
-  vpc_id   = data.aws_vpc.secondaryvpc.id
+  provider = aws.secondary
+  vpc_id   = data.aws_vpc.secondary_vpc.id
   ingress {
     description = "TLS from VPC"
     from_port   = 0
@@ -76,25 +85,29 @@ resource "aws_security_group" "sg" {
 }
 
 resource "aws_s3_bucket" "mm2bucket" {
+  provider = aws.secondary
   bucket        = "mm2bucketmm2zipmskconnect"
   force_destroy = true
 }
 
 resource "aws_s3_object" "mm2object" {
+  provider = aws.secondary
   bucket     = "mm2bucketmm2zipmskconnect"
   key        = "connect-api-2.7.1.jar"
-  source     = "./mskconnect/mm2/connect-api-2.7.1.jar"
-  etag       = filemd5("./mskconnect/mm2/connect-api-2.7.1.jar")
+  source     = "./kafka/mskconnect/mm2/connect-api-2.7.1.jar"
+  etag       = filemd5("./kafka/mskconnect/mm2/connect-api-2.7.1.jar")
   depends_on = [
     aws_s3_bucket.mm2bucket
   ]
 }
 
 resource "aws_cloudwatch_log_group" "mskconnect_MirrorSourceConnector_logs" {
+  provider = aws.secondary
   name     = "mskconnect_MirrorSourceConnector_logs"
 }
 
 resource "aws_cloudwatch_log_group" "mskconnect_MirrorCheckpointConnector_logs" {
+  provider = aws.secondary
   name     = "mskconnect_MirrorCheckpointConnector_logs"
 }
 resource "aws_cloudwatch_log_group" "mskconnect_MirrorHeartbeatConnector_logs" {
@@ -102,6 +115,7 @@ resource "aws_cloudwatch_log_group" "mskconnect_MirrorHeartbeatConnector_logs" {
 }
 
 resource "aws_mskconnect_custom_plugin" "example" {
+  provider = aws.secondary
   name         = "MSKConnectPlugin"
   content_type = "ZIP"
   location {
@@ -114,6 +128,7 @@ resource "aws_mskconnect_custom_plugin" "example" {
 
 
 resource "aws_mskconnect_connector" "MirrorSourceConnector" {
+  provider = aws.secondary
   name     = "MirrorSourceConnector"
 
   kafkaconnect_version = "2.7.1"
@@ -198,6 +213,7 @@ resource "aws_mskconnect_connector" "MirrorSourceConnector" {
 
 
 resource "aws_mskconnect_connector" "MirrorCheckpointConnector" {
+  provider = aws.secondary
   name     = "MirrorCheckpointConnector"
 
   kafkaconnect_version = "2.7.1"
@@ -279,6 +295,7 @@ resource "aws_mskconnect_connector" "MirrorCheckpointConnector" {
 }
 
 resource "aws_mskconnect_connector" "MirrorHeartbeatConnector" {
+  provider = aws.secondary
   name     = "MirrorHeartbeatConnector"
 
   kafkaconnect_version = "2.7.1"
