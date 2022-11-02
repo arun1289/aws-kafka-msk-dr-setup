@@ -61,8 +61,8 @@ module "secondary" {
   secondary_subnet_zone_c = var.secondary_subnet_zone_c
 }
 
-module "vpcpeering" {
-  source = "./vpc/vpcpeering"
+module "mssql" {
+  source = "./mssql"
   providers = {
     aws.primary = aws.primary
     aws.secondary = aws.secondary
@@ -100,5 +100,5 @@ module "mskconnect" {
   secondary_subnet_zone_b = var.secondary_subnet_zone_b
   secondary_subnet_zone_c = var.secondary_subnet_zone_c
 
-  depends_on = [module.primary, module.secondary, module.vpcpeering]
+  depends_on = [module.primary, module.secondary]
 }

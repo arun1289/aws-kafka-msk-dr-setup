@@ -1,10 +1,11 @@
-provider "aws" {
-  region = var.primary_region
-}
-
-provider "aws" {
-  alias  = "secondary"
-  region = var.secondary_region
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = ">= 2.7.0"
+      configuration_aliases = [ aws.primary, aws.secondary ]
+    }
+  }
 }
 
 data "aws_vpc" "primary_vpc" {
@@ -42,9 +43,5 @@ resource "aws_instance" "mssql1" {
   provider      = aws.primary
   ami           = var.ami
   instance_type = var.instance_type
-
-  network_interface {
-    network_interface_id = var.network_interface_id
-    device_index         = 0
-  }
+  availability_zone = data.aws_subnet.subnet_az1.availability_zone_id
 }
